@@ -8,8 +8,8 @@ RUN apt-get update &&     apt-get install -y jq &&     apt-get clean
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py &&     python get-pip.py &&     pip3 install setuptools &&     rm get-pip.py
 RUN python3 -m pip install --upgrade pip
 
-COPY ../../component/build.json /app/
-COPY ../../component/requirements.txt /app/
+COPY ../build.json /app/
+COPY ../requirements.txt /app/
 
 #COPY ${WORKSPACE}/component/requirements.txt /app/
 #COPY ${WORKSPACE}/component/build.json /app/
