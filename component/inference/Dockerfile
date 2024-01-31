@@ -9,7 +9,7 @@ RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py &&     python get-pi
 RUN python3 -m pip install --upgrade pip
 
 COPY build.json /app/
-# COPY ../requirements.txt /app/
+COPY requirements.txt /app/
 
 #COPY ${WORKSPACE}/component/requirements.txt /app/
 #COPY ${WORKSPACE}/component/build.json /app/
