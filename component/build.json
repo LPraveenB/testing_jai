@@ -1,0 +1,50 @@
+{
+  "script_paths": {
+    "data_split": "gs://vertex-scripts/ml-scripts/data-split/",
+    "scoring": "gs://vertex-scripts/ml-scripts/scoring/",
+    "switch": "gs://vertex-scripts/ml-scripts/switch",
+    "env_config":{
+        "project": "dollar-tree-project-369709",
+        "region": "us-west1-docker.pkg.dev",
+        "repository": "fd-dask-docker"
+    },
+    "inference_image": {
+      "imageName": "dask-mlinference-image",
+      "pythonVersion": "3.8.15"
+    },
+    "inference_metric_image": {
+      "imageName": "dask-mlinference-metrics-image",
+      "pythonVersion": "3.8.15"
+    },
+
+    "test_new_models": {
+      "imageName": "dask-test-new-models",
+      "pythonVersion": "3.8.15"
+    },
+
+    "test_production_model": {
+      "imageName": "dask-test-production-model",
+      "pythonVersion": "3.8.15"
+    },
+
+    "predict_for_audit": {
+      "imageName": "dask-model-test-predict-for-audit",
+      "pythonVersion": "3.8.15"
+    },
+
+    "determine_thresholds_image": {
+      "imageName": "dask-model-determine-thresholds-image",
+      "pythonVersion": "3.8.15"
+    },
+
+    "confidence_metrics_image": {
+      "imageName": "dask-model-confidence-metrics-image",
+      "pythonVersion": "3.8.15"
+    },
+
+    "scoring_image": {
+      "imageName": "dask-scoring",
+      "pythonVersion": "3.8.15"
+    }
+  }
+}

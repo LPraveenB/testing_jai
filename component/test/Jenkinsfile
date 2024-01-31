@@ -1,0 +1,98 @@
+#!groovy
+
+pipeline {
+    agent any
+    options {
+        buildDiscarder logRotator(
+                    daysToKeepStr: '16',
+                    numToKeepStr: '10'
+            )
+    }
+    stages {
+        stage('build') {
+            steps {
+                echo 'build test'
+            }
+        }
+        stage("test"){
+              steps{
+                echo "pipenv run pytest"
+              }
+        }
+        stage("publish_test_new_models") {
+            steps {
+                script {
+                    def version = sh(script: 'cat ${WORKSPACE}/component/test/version.txt', returnStdout: true).trim()
+                    def dateTime = sh(script: 'date +"%Y%m%d%H%M"', returnStdout: true).trim()
+                    def imageTag = "${version}-${dateTime}"
+                    def config = readJSON file: "${WORKSPACE}/component/build.json"
+                    def testConfig = config.script_paths.test_new_models
+                    def env_config = config.script_paths.env_config
+                    def region = env_config.region
+                    def project = env_config.project
+                    def repository = env_config.repository
+                    def imageName = testConfig.imageName
+                    def pythonVersion = testConfig.pythonVersion
+
+                    // Changing the working directory to where the Dockerfile is located
+                    dir("${WORKSPACE}/component/test") {
+                        sh "gcloud auth configure-docker us-west1-docker.pkg.dev"
+                        sh "docker build --build-arg=PYTHON_VERSION=${pythonVersion} -t test-new-models -f Dockerfile ."
+                        sh "docker tag test-new-models ${region}/${project}/${repository}/${imageName}:latest"
+                        sh "docker push ${region}/${project}/${repository}/${imageName}:latest"
+                    }
+                }
+            }
+        }
+        stage("publish_test_production_model") {
+            steps {
+                script {
+                    def version = sh(script: 'cat ${WORKSPACE}/component/test/version.txt', returnStdout: true).trim()
+                    def dateTime = sh(script: 'date +"%Y%m%d%H%M"', returnStdout: true).trim()
+                    def imageTag = "${version}-${dateTime}"
+                    def config = readJSON file: "${WORKSPACE}/component/build.json"
+                    def testConfig = config.script_paths.test_production_model
+                    def env_config = config.script_paths.env_config
+                    def region = env_config.region
+                    def project = env_config.project
+                    def repository = env_config.repository
+                    def imageName = testConfig.imageName
+                    def pythonVersion = testConfig.pythonVersion
+
+                    // Changing the working directory to where the Dockerfile is located
+                    dir("${WORKSPACE}/component/test") {
+                        sh "gcloud auth configure-docker us-west1-docker.pkg.dev"
+                        sh "docker build --build-arg=PYTHON_VERSION=${pythonVersion} -t test-production-models -f Dockerfile ."
+                        sh "docker tag test-production-models ${region}/${project}/${repository}/${imageName}:latest"
+                        sh "docker push ${region}/${project}/${repository}/${imageName}:latest"
+                    }
+                }
+            }
+        }
+        stage("publish_predict_for_audit") {
+            steps {
+                script {
+                    def version = sh(script: 'cat ${WORKSPACE}/component/test/version.txt', returnStdout: true).trim()
+                    def dateTime = sh(script: 'date +"%Y%m%d%H%M"', returnStdout: true).trim()
+                    def imageTag = "${version}-${dateTime}"
+                    def config = readJSON file: "${WORKSPACE}/component/build.json"
+                    def testConfig = config.script_paths.predict_for_audit
+                    def env_config = config.script_paths.env_config
+                    def region = env_config.region
+                    def project = env_config.project
+                    def repository = env_config.repository
+                    def imageName = testConfig.imageName
+                    def pythonVersion = testConfig.pythonVersion
+
+                    // Changing the working directory to where the Dockerfile is located
+                    dir("${WORKSPACE}/component/test") {
+                        sh "gcloud auth configure-docker us-west1-docker.pkg.dev"
+                        sh "docker build --build-arg=PYTHON_VERSION=${pythonVersion} -t predict-for-audit -f Dockerfile ."
+                        sh "docker tag predict-for-audit ${region}/${project}/${repository}/${imageName}:latest"
+                        sh "docker push ${region}/${project}/${repository}/${imageName}:latest"
+                    }
+                }
+            }
+        }
+    }
+}

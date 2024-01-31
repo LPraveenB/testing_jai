@@ -1,0 +1,29 @@
+#!groovy
+
+pipeline {
+    agent any
+     options {
+        buildDiscarder logRotator( 
+                    daysToKeepStr: '16', 
+                    numToKeepStr: '10'
+            )
+    }
+    stages {
+        stage('build') {
+            steps {
+                echo 'build data-split'
+            }
+        }
+        stage("test"){
+              steps{
+                echo "pipenv run pytest"
+              }
+        }
+        stage("publish"){
+              steps{
+                sh "ls"
+                sh "sh component/data-split/pipeline/build.sh"
+              }
+        }
+    }
+}

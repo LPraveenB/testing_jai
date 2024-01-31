@@ -1,0 +1,48 @@
+#!groovy
+
+pipeline {
+    agent any
+    options {
+        buildDiscarder logRotator(
+                    daysToKeepStr: '16',
+                    numToKeepStr: '10'
+            )
+    }
+    stages {
+        stage('build') {
+            steps {
+                echo 'build test'
+            }
+        }
+        stage("scoring"){
+              steps{
+                echo "pipenv run pytest"
+              }
+        }
+        stage("publish_determine_thresholds") {
+            steps {
+                script {
+                    def version = sh(script: 'cat ${WORKSPACE}/component/determine_thresholds/version.txt', returnStdout: true).trim()
+                    def dateTime = sh(script: 'date +"%Y%m%d%H%M"', returnStdout: true).trim()
+                    def imageTag = "${version}-${dateTime}"
+                    def config = readJSON file: "${WORKSPACE}/component/build.json"
+                    def testConfig = config.script_paths.determine_thresholds_image
+                    def env_config = config.script_paths.env_config
+                    def region = env_config.region
+                    def project = env_config.project
+                    def repository = env_config.repository
+                    def imageName = testConfig.imageName
+                    def pythonVersion = testConfig.pythonVersion
+
+                    // Changing the working directory to where the Dockerfile is located
+                    dir("${WORKSPACE}/component/determine_thresholds") {
+                        sh "gcloud auth configure-docker us-west1-docker.pkg.dev"
+                        sh "docker build -t dask-model-test -f Dockerfile ."
+                        sh "docker tag dask-model-test ${region}/${project}/${repository}/${imageName}:latest"
+                        sh "docker push ${region}/${project}/${repository}/${imageName}:latest"
+                    }
+                }
+            }
+        }
+    }
+}

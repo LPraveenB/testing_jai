@@ -1,0 +1,74 @@
+pipeline {
+    agent any
+    options {
+        buildDiscarder logRotator(
+            daysToKeepStr: '16',
+            numToKeepStr: '10'
+        )
+    }
+    stages {
+        stage('build') {
+            steps {
+                echo 'build inference'
+            }
+        }
+        stage("test") {
+            steps {
+                echo "pipenv run pytest"
+            }
+        }
+
+        stage("publish_inference") {
+            steps {
+                script {
+                    def version = sh(script: 'cat ${WORKSPACE}/component/inference/version.txt', returnStdout: true).trim()
+                    def dateTime = sh(script: 'date +"%Y%m%d%H%M"', returnStdout: true).trim()
+                    def imageTag = "${version}-${dateTime}"
+                    def config = readJSON file: "${WORKSPACE}/component/build.json"
+                    def inferenceConfig = config.script_paths.inference_image
+                    def env_config = config.script_paths.env_config
+                    def region = env_config.region
+                    def project = env_config.project
+                    def repository = env_config.repository
+                    def imageName = inferenceConfig.imageName
+                    def pythonVersion = inferenceConfig.pythonVersion
+
+                    sh "cp ${WORKSPACE}/component/build.json ${WORKSPACE}/component/inference/"
+                    // Changing the working directory to where the Dockerfile is located
+                    dir("${WORKSPACE}/component/inference") {
+                        sh "gcloud auth configure-docker us-west1-docker.pkg.dev"
+                        sh "docker build --build-arg=PYTHON_VERSION=${pythonVersion} -t inference -f Dockerfile ."
+                        sh "docker tag inference ${region}/${project}/${repository}/${imageName}:latest"
+                        sh "docker push ${region}/${project}/${repository}/${imageName}:latest"
+                    }
+                }
+            }
+        }
+        stage("publish_inference_metrics") {
+            steps {
+                script {
+                    def version = sh(script: 'cat ${WORKSPACE}/component/inference/version.txt', returnStdout: true).trim()
+                    def dateTime = sh(script: 'date +"%Y%m%d%H%M"', returnStdout: true).trim()
+                    def imageTag = "${version}-${dateTime}"
+                    def config = readJSON file: "${WORKSPACE}/component/build.json"
+                    def metricsConfig = config.script_paths.inference_metric_image
+                    def env_config = config.script_paths.env_config
+                    def region = env_config.region
+                    def project = env_config.project
+                    def repository = env_config.repository
+                    def imageName = metricsConfig.imageName
+                    def pythonVersion = metricsConfig.pythonVersion
+
+                    sh "cp ${WORKSPACE}/component/build.json ${WORKSPACE}/component/inference/"
+                    // Changing the working directory to where the Dockerfile is located
+                    dir("${WORKSPACE}/component/inference") {
+                        sh "gcloud auth configure-docker us-west1-docker.pkg.dev"
+                        sh "docker build --build-arg=PYTHON_VERSION=${pythonVersion} -t inference-metrics -f Dockerfile_metrics ."
+                        sh "docker tag inference-metrics ${region}/${project}/${repository}/${imageName}:latest"
+                        sh "docker push ${region}/${project}/${repository}/${imageName}:latest"
+                    }
+                }
+            }
+        }
+    }
+}

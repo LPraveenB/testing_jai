@@ -1,0 +1,73 @@
+#!groovy
+
+pipeline {
+    agent any
+    options {
+        buildDiscarder logRotator(
+                    daysToKeepStr: '16',
+                    numToKeepStr: '10'
+            )
+    }
+    stages {
+        stage('build') {
+            steps {
+                echo 'build test'
+            }
+        }
+        stage("scoring"){
+              steps{
+                echo "pipenv run pytest"
+              }
+        }
+        stage("publish_scoring_new") {
+            steps {
+                script {
+                    def version = sh(script: 'cat ${WORKSPACE}/component/scoring/version.txt', returnStdout: true).trim()
+                    def dateTime = sh(script: 'date +"%Y%m%d%H%M"', returnStdout: true).trim()
+                    def imageTag = "${version}-${dateTime}"
+                    def config = readJSON file: "${WORKSPACE}/component/build.json"
+                    def testConfig = config.script_paths.scoring_image
+                    def env_config = config.script_paths.env_config
+                    def region = env_config.region
+                    def project = env_config.project
+                    def repository = env_config.repository
+                    def imageName = testConfig.imageName
+                    def pythonVersion = testConfig.pythonVersion
+
+                    // Changing the working directory to where the Dockerfile is located
+                    dir("${WORKSPACE}/component/scoring") {
+                        sh "gcloud auth configure-docker us-west1-docker.pkg.dev"
+                        sh "docker build --build-arg=PYTHON_VERSION=${pythonVersion} -t scoring-new -f Dockerfile ."
+                        sh "docker tag scoring-new ${region}/${project}/${repository}/${imageName}:latest"
+                        sh "docker push ${region}/${project}/${repository}/${imageName}:latest"
+                    }
+                }
+            }
+        }
+        stage("publish_scoring_prod") {
+            steps {
+                script {
+                    def version = sh(script: 'cat ${WORKSPACE}/component/scoring/version.txt', returnStdout: true).trim()
+                    def dateTime = sh(script: 'date +"%Y%m%d%H%M"', returnStdout: true).trim()
+                    def imageTag = "${version}-${dateTime}"
+                    def config = readJSON file: "${WORKSPACE}/component/build.json"
+                    def testConfig = config.script_paths.scoring_image_prod
+                    def env_config = config.script_paths.env_config
+                    def region = env_config.region
+                    def project = env_config.project
+                    def repository = env_config.repository
+                    def imageName = testConfig.imageName
+                    def pythonVersion = testConfig.pythonVersion
+
+                    // Changing the working directory to where the Dockerfile is located
+                    dir("${WORKSPACE}/component/scoring") {
+                        sh "gcloud auth configure-docker us-west1-docker.pkg.dev"
+                        sh "docker build --build-arg=PYTHON_VERSION=${pythonVersion} -t scoring-prod -f Dockerfile_prod ."
+                        sh "docker tag scoring-prod ${region}/${project}/${repository}/${imageName}:latest"
+                        sh "docker push ${region}/${project}/${repository}/${imageName}:latest"
+                    }
+                }
+            }
+        }
+    }
+}
