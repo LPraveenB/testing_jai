@@ -37,7 +37,7 @@ pipeline {
                     // Changing the working directory to where the Dockerfile is located
                     dir("${WORKSPACE}/component/inference") {
                         sh "gcloud auth configure-docker us-west1-docker.pkg.dev"
-                        sh "docker build --build-arg=PYTHON_VERSION=${pythonVersion} -t inference -f Dockerfile ."
+                        sh "docker build --no-cache --build-arg=PYTHON_VERSION=${pythonVersion} -t inference -f Dockerfile ."
                         sh "docker tag inference ${region}/${project}/${repository}/${imageName}:latest"
                         sh "docker push ${region}/${project}/${repository}/${imageName}:latest"
                     }
